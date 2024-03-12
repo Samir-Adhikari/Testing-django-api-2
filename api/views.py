@@ -27,16 +27,17 @@ def count_persons_by_gender(communityid):
     
     return counts
 
-def age_range_percentages(community_id, respondents):
+def age_range_percentages(respondents, community_id=None):
     """
-    Count the number of persons in different age ranges for a specific community.
+    Count the number of persons in different age ranges, for a specific community or everyone.
     
     Args:
-        community_id (int): ID of the community.
+        community_id (Optional[int]): ID of the community. If None, considers all communities.
+        respondents (int): Total number of respondents to calculate percentages.
         
     Returns:
-        dict: A dictionary containing counts of persons in different age ranges.
-            Keys are age range labels, and values are the corresponding counts.
+        dict: A dictionary containing percentages of persons in different age ranges.
+            Keys are age range labels, and values are the percentages.
     """
     current_date = date.today()
     
@@ -54,25 +55,24 @@ def age_range_percentages(community_id, respondents):
         'Over 60': (None, current_date.replace(year=current_date.year - 60))
     }
     
-    # Dictionary to store the counts
-    counts_by_age_range = {}
+    # Initial query set
+    queryset = Person.objects.all() if community_id is None else Person.objects.filter(communityid=community_id)
+    
+    # Dictionary to store the percentages
+    percentages_by_age_range = {}
     
     for age_range, (dob_start, dob_end) in age_ranges.items():
-        if respondents == 0:
-            counts_by_age_range[age_range] = 0
-            continue
-        # Filter by community_id and date of birth range
-        queryset = Person.objects.filter(communityid=community_id)
+        age_range_query = queryset
         if dob_start is not None:
-            queryset = queryset.filter(date_of_birth__lte=dob_start)
+            age_range_query = age_range_query.filter(date_of_birth__lte=dob_start)
         if dob_end is not None:
-            queryset = queryset.filter(date_of_birth__gte=dob_end)
+            age_range_query = age_range_query.filter(date_of_birth__gte=dob_end)
         
-        # Count the records and update the dictionary
-        count = queryset.count()
-        counts_by_age_range[age_range] = round((count/respondents)*100,1)
+        # Count the records and calculate percentage
+        count = age_range_query.count()
+        percentages_by_age_range[age_range] = round((count / respondents) * 100, 1) if respondents > 0 else 0
     
-    return counts_by_age_range
+    return percentages_by_age_range
 
 def get_community(request, communityid):
     try:
@@ -150,7 +150,7 @@ def get_community(request, communityid):
 
         community = Community.objects.get(communityid=communityid)
         gender_count = count_persons_by_gender(communityid)
-        age_percentage = age_range_percentages(communityid, respondents)
+        age_percentage = age_range_percentages(respondents, communityid)
         
         data = {
             'communityInfo': {
@@ -179,3 +179,34 @@ def get_community(request, communityid):
         return JsonResponse(data)
     except Community.DoesNotExist:
         return JsonResponse({'error': 'Community not found'}, status=404)
+    
+def get_communities(request):
+    communities = Community.objects.all()
+    data = [
+        {"id": community.communityid, "region": community.city, "country": community.country}
+        for community in communities
+    ]
+    return JsonResponse(data, safe=False)  # Return response as JSON
+
+def survey_statistics(request):
+
+    total_persons = Person.objects.all().count()
+    age_percentage = age_range_percentages(total_persons)
+    total_responses = Response.objects.all().count()
+    unique_countries_count = Person.objects.values_list('communityid__country', flat=True).distinct().count()
+    
+    statistics = {
+        'totalResponses': total_responses,
+        'totalRespondants': total_persons,
+        'numberofCountries': unique_countries_count,
+        'ageDistribution': [
+            {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
+            {'ageGroup': '15-21', 'percentage': age_percentage['15-21']},
+            {'ageGroup': '22-29', 'percentage': age_percentage['22-29']},
+            {'ageGroup': '30-39', 'percentage': age_percentage['30-39']},
+            {'ageGroup': '40-59', 'percentage': age_percentage['40-59']},
+            {'ageGroup': '60+', 'percentage': age_percentage['Over 60']},
+        ],
+    }
+
+    return JsonResponse(statistics, safe=False)
