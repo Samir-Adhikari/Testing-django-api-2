@@ -7,7 +7,7 @@ from .models import *
 from django.db.models import Max
 from datetime import date, timedelta
 
-def count_persons_by_gender(communityid):
+def count_persons_by_gender(queryset):
     """
     Count the number of persons in a community by gender.
     
@@ -22,7 +22,7 @@ def count_persons_by_gender(communityid):
     counts = {}
     
     for gender in genders:
-        count = Person.objects.filter(communityid=communityid, gender=gender).count()
+        count = queryset.filter(gender=gender).count()
         counts[gender] = count
     
     return counts
@@ -32,10 +32,10 @@ def calculate_age(birthdate):
     today = date.today()
     return today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
 
-def age_range_percentages(respondents, community_id=None):
+def age_range_percentages(respondents, queryset=None):
     """Calculate percentages of people in various age ranges."""
-    # Fetch records
-    queryset = Person.objects.all() if community_id is None else Person.objects.filter(communityid=community_id)
+    if queryset is None:
+        queryset = Person.objects.all()
     
     # Initialize age counts
     age_counts = {
@@ -148,8 +148,8 @@ def get_community(request, communityid):
             survey_info.append(survey_dict)
 
         community = Community.objects.get(communityid=communityid)
-        gender_count = count_persons_by_gender(communityid)
-        age_percentage = age_range_percentages(respondents, communityid)
+        gender_count = count_persons_by_gender(Person.objects.filter(communityid=communityid))
+        age_percentage = age_range_percentages(respondents, Person.objects.filter(communityid=communityid))
         
         data = {
             'communityInfo': {
@@ -209,3 +209,81 @@ def survey_statistics(request):
     }
 
     return JsonResponse(statistics, safe=False)
+
+def number_of_respondents(country):
+    communities = Community.objects.filter(countryid=country)
+    respondents = 0
+    for community in communities:
+        respondents += Person.objects.filter(communityid=community.communityid).count()        
+    return respondents
+
+def get_country(request):
+    countryList = []
+
+    # Get all country IDs that exist in the Community table
+    country_ids = Community.objects.values_list('countryid', flat=True).distinct()
+    # Use those IDs to filter Country instances
+    countries = Country.objects.filter(countryid__in=country_ids)
+
+    for country in countries:        
+        countryInfo = {
+            'code': country.code,
+            'country': country.name,
+            'latitude': country.latitude, 
+            'longitude': country.longitude, 
+            'regionNumber': country.countryid, 
+            'respondants': number_of_respondents(country),
+        }
+        countryList.append(countryInfo)
+
+    return JsonResponse(countryList, safe=False)
+
+def get_country_response(request, countrycode):
+    country = Country.objects.get(code=countrycode)
+    number_of_regions = Community.objects.filter(countryid=country.countryid).distinct().count()
+    community_ids = Community.objects.filter(countryid=country.countryid).values_list('communityid', flat=True)
+    people = Person.objects.filter(communityid__in=community_ids)
+    respondents = number_of_respondents(country)
+    age_percentage = age_range_percentages(respondents, people)
+    most_recent_response = Response.objects.filter(personid__in=people).order_by('-responsetimestamp').first()
+
+    # Extract the timestamp if a response exists, else default to None or a suitable placeholder.
+    last_response_date = most_recent_response.responsetimestamp if most_recent_response else 'No responses'
+
+    gender_count = count_persons_by_gender(people)
+
+    countryRegions = []
+    for communityid in community_ids:
+        community = Community.objects.get(communityid=communityid)
+        person_ids = Person.objects.filter(communityid=communityid).values_list('personid', flat=True)
+        community_info = {
+            'id': communityid,
+            'region': community.city,
+            'responses': Response.objects.filter(personid__in=person_ids).count()
+        }
+        countryRegions.append(community_info)
+
+    countryResponse = {
+        'countryInfo': {
+            'code': countrycode,
+            'countryName': country.name,
+            'respondents': respondents,
+            'regions': number_of_regions,
+            'lastResponseDate': last_response_date.strftime("%B %d, %Y") if most_recent_response else last_response_date,
+            'genderRatio': {
+                'Male': gender_count['Male'],
+                'Female': gender_count['Female'],
+            },
+            'ageDistribution': [
+                {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
+                {'ageGroup': '15-21', 'percentage': age_percentage['15-21']},
+                {'ageGroup': '22-29', 'percentage': age_percentage['22-29']},
+                {'ageGroup': '30-39', 'percentage': age_percentage['30-39']},
+                {'ageGroup': '40-59', 'percentage': age_percentage['40-59']},
+                {'ageGroup': '60+', 'percentage': age_percentage['Over 60']},
+            ],
+        },
+        'countryRegions': countryRegions,
+    }
+
+    return JsonResponse(countryResponse, safe=False)
