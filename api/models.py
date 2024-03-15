@@ -1,9 +1,19 @@
 from django.db import models
 
+class Country(models.Model):
+    countryid = models.AutoField(db_column='countryId', primary_key=True)  
+    name = models.CharField(max_length=512, blank=True, null=True)
+    code = models.CharField(max_length=512, blank=True, null=True)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'Country'
 
 class Community(models.Model):
     communityid = models.AutoField(db_column='communityId', primary_key=True) 
-    country = models.CharField(max_length=100, blank=True, null=True)
+    countryid = models.ForeignKey('Country', models.DO_NOTHING, db_column='countryId', blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
@@ -22,8 +32,7 @@ class Option(models.Model):
 
 class Person(models.Model):
     personid = models.AutoField(db_column='personId', primary_key=True)
-    firstname = models.CharField(db_column='firstName', max_length=50, blank=True, null=True)
-    lastname = models.CharField(db_column='lastName', max_length=50, blank=True, null=True)
+    name = models.CharField(max_length=50, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     gender = models.CharField(max_length=50, blank=True, null=True)
     communityid = models.ForeignKey(Community, models.DO_NOTHING, db_column='communityId', blank=True, null=True)
