@@ -152,6 +152,10 @@ def get_community(request, communityid):
         community = Community.objects.get(communityid=communityid)
         gender_count = count_persons_by_gender(Person.objects.filter(communityid=communityid))
         age_percentage = age_range_percentages(respondents, Person.objects.filter(communityid=communityid))
+        gender_percentages = gender_count
+        if respondents != 0:
+            gender_percentages['Male'] = round(gender_count['Male']/respondents,1)*100
+            gender_percentages['Female'] = round(gender_count['Female']/respondents,1)*100
         
         data = {
             'communityInfo': {
@@ -161,9 +165,8 @@ def get_community(request, communityid):
                 'responders': respondents,
                 'lastResponseDate': last_response_date,
                 'genderRatio': {
-                    'male': round(gender_count['Male']/respondents,1)*100,
-                    'female': round(gender_count['Female']/respondents,1)*100,                    #'Other': gender_count['Other'],
-                    #'I prefer not to say': gender_count['I prefer not to say'],
+                    'male': gender_percentages['Male'],
+                    'female': gender_percentages['Female'],                    
                 },
                 'ageDistribution': [
                     {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
@@ -252,6 +255,10 @@ def get_country_response(request, countrycode):
     last_response_date = most_recent_response.responsetimestamp if most_recent_response else 'No responses'
 
     gender_count = count_persons_by_gender(people)
+    gender_percentages = gender_count
+    if respondents != 0:
+        gender_percentages['Male'] = round(gender_count['Male']/respondents,1)*100
+        gender_percentages['Female'] = round(gender_count['Female']/respondents,1)*100,
 
     countryRegions = []
     for communityid in community_ids:
@@ -272,8 +279,8 @@ def get_country_response(request, countrycode):
             'regions': number_of_regions,
             'lastResponseDate': last_response_date.strftime("%B %d, %Y") if most_recent_response else last_response_date,
             'genderRatio': {
-                'male': round(gender_count['Male']/respondents,1)*100,
-                'female': round(gender_count['Female']/respondents,1)*100,
+                'male': gender_percentages['Male'],
+                'female': gender_percentages['Female'],
             },
             'ageDistribution': [
                 {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
