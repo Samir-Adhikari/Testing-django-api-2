@@ -161,9 +161,8 @@ def get_community(request, communityid):
                 'responders': respondents,
                 'lastResponseDate': last_response_date,
                 'genderRatio': {
-                    'male': gender_count['Male'],
-                    'female': gender_count['Female'],
-                    #'Other': gender_count['Other'],
+                    'male': round(gender_count['Male']/respondents,1)*100,
+                    'female': round(gender_count['Female']/respondents,1)*100,                    #'Other': gender_count['Other'],
                     #'I prefer not to say': gender_count['I prefer not to say'],
                 },
                 'ageDistribution': [
@@ -273,8 +272,8 @@ def get_country_response(request, countrycode):
             'regions': number_of_regions,
             'lastResponseDate': last_response_date.strftime("%B %d, %Y") if most_recent_response else last_response_date,
             'genderRatio': {
-                'male': gender_count['Male'],
-                'female': gender_count['Female'],
+                'male': round(gender_count['Male']/respondents,1)*100,
+                'female': round(gender_count['Female']/respondents,1)*100,
             },
             'ageDistribution': [
                 {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
