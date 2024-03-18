@@ -125,7 +125,9 @@ def get_community(request, communityid):
                 questionid = surveyquestion.questionid.questionid
                 question = Question.objects.get(questionid=questionid)
                 options_count = Questionoption.objects.filter(questionid=questionid).count()
-                if options_count <= 3:
+                if question.type == 'Text Entry':
+                    chartType = 'text'
+                elif options_count <= 3:
                     chartType = 'bar'
                 else:
                     chartType = 'pie'
@@ -159,8 +161,8 @@ def get_community(request, communityid):
                 'responders': respondents,
                 'lastResponseDate': last_response_date,
                 'genderRatio': {
-                    'Male': gender_count['Male'],
-                    'Female': gender_count['Female'],
+                    'male': gender_count['Male'],
+                    'female': gender_count['Female'],
                     #'Other': gender_count['Other'],
                     #'I prefer not to say': gender_count['I prefer not to say'],
                 },
@@ -271,8 +273,8 @@ def get_country_response(request, countrycode):
             'regions': number_of_regions,
             'lastResponseDate': last_response_date.strftime("%B %d, %Y") if most_recent_response else last_response_date,
             'genderRatio': {
-                'Male': gender_count['Male'],
-                'Female': gender_count['Female'],
+                'male': gender_count['Male'],
+                'female': gender_count['Female'],
             },
             'ageDistribution': [
                 {'ageGroup': '0-14', 'percentage': age_percentage['0-14']},
