@@ -14,7 +14,7 @@ class Country(models.Model):
 class Community(models.Model):
     communityid = models.AutoField(db_column='communityId', primary_key=True) 
     countryid = models.ForeignKey('Country', models.DO_NOTHING, db_column='countryId', blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -33,6 +33,7 @@ class Option(models.Model):
 class Person(models.Model):
     personid = models.AutoField(db_column='personId', primary_key=True)
     name = models.CharField(max_length=50, blank=True, null=True)
+    sender_number = models.CharField(max_length=50, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     gender = models.CharField(max_length=50, blank=True, null=True)
     communityid = models.ForeignKey(Community, models.DO_NOTHING, db_column='communityId', blank=True, null=True)
@@ -43,7 +44,9 @@ class Person(models.Model):
 
 
 class Question(models.Model):
+    #contentsid
     questionid = models.AutoField(db_column='questionId', primary_key=True)
+    contentsid = models.CharField(db_column='contentSid', max_length=50, blank=True, null=True)
     type = models.CharField(max_length=50, blank=True, null=True)
     question = models.TextField(blank=True, null=True) 
 
@@ -85,10 +88,28 @@ class Survey(models.Model):
 
 
 class Surveyquestion(models.Model):
+    #add order
     surveyquestionid = models.AutoField(db_column='surveyQuestionId', primary_key=True)
+    order_number = models.IntegerField(blank=True, null=True)
     surveyid = models.ForeignKey(Survey, models.DO_NOTHING, db_column='surveyId', blank=True, null=True)
     questionid = models.ForeignKey(Question, models.DO_NOTHING, db_column='questionId', blank=True, null=True)
 
     class Meta:
+        ordering = ['order_number']
         managed = False
         db_table = 'SurveyQuestion'
+
+class Userstate(models.Model):
+    userid = models.AutoField(db_column='userId', primary_key=True)
+    personid = models.ForeignKey(Person, models.DO_NOTHING, db_column='personId', blank=True, null=True)
+    sender_number = models.IntegerField(blank=True, null=True)
+    stage = models.CharField(max_length=100)
+    surveyid = models.ForeignKey(Survey, models.DO_NOTHING, db_column='surveyId', blank=True, null=True) 
+    surveyquestionid = models.ForeignKey(Surveyquestion, models.DO_NOTHING, db_column='surveyQuestionId', blank=True, null=True) 
+    temp_country = models.CharField(max_length=100, blank=True, null=True)
+    temp_region = models.CharField(max_length=100, blank=True, null=True)
+    temp_gender = models.CharField(max_length=50, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'UserState'

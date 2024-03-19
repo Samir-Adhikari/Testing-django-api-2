@@ -160,7 +160,7 @@ def get_community(request, communityid):
         data = {
             'communityInfo': {
                 'id': communityid,
-                'region': community.city,
+                'region': community.region,
                 'country': community.countryid.name,
                 'responders': respondents,
                 'lastResponseDate': last_response_date,
@@ -186,7 +186,7 @@ def get_community(request, communityid):
 def get_communities(request):
     communities = Community.objects.select_related('countryid').all()  # Optimized query
     data = [
-        {"id": community.communityid, "region": community.city, "country": community.countryid.name}
+        {"id": community.communityid, "region": community.region, "country": community.countryid.name}
         for community in communities
     ]
     return JsonResponse(data, safe=False)  # Return response as JSON
@@ -266,7 +266,7 @@ def get_country_response(request, countrycode):
         person_ids = Person.objects.filter(communityid=communityid).values_list('personid', flat=True)
         community_info = {
             'id': communityid,
-            'region': community.city,
+            'region': community.region,
             'responses': Response.objects.filter(personid__in=person_ids).count()
         }
         countryRegions.append(community_info)
